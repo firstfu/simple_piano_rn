@@ -14,18 +14,14 @@ import {
   AudioContext, 
   OscillatorNode, 
   GainNode,
-  BiquadFilterNode,
-  AudioBufferSourceNode
+  BiquadFilterNode
 } from 'react-native-audio-api';
 
 import type { 
   NoteId, 
   PlayingNote, 
   AudioServiceConfig, 
-  AudioNodeState,
-  ErrorType,
-  Callback,
-  AsyncCallback 
+  ErrorType
 } from '../types';
 
 import { PIANO_FREQUENCIES, isSupportedNote } from '../utils/noteFrequencies';
@@ -61,6 +57,7 @@ export class AudioService {
   private audioContext: AudioContext | null = null;
   private masterGainNode: GainNode | null = null;
   private filterNode: BiquadFilterNode | null = null;
+  private compressorNode: GainNode | null = null; // 軟限幅器
   
   // 播放狀態管理
   private playingNotes: Map<NoteId, PlayingNote> = new Map();
@@ -68,14 +65,14 @@ export class AudioService {
   
   // 配置參數
   private config: AudioServiceConfig = {
-    masterVolume: 0.7,
+    masterVolume: 0.4,  // 降低主音量避免破音
     envelope: {
-      attack: 0.02,   // 20ms 起音時間
-      decay: 0.3,     // 300ms 衰減時間  
-      sustain: 0.7,   // 70% 維持音量
-      release: 0.8,   // 800ms 釋音時間
+      attack: 0.005,  // 5ms 更快的起音
+      decay: 0.1,     // 100ms 較短的衰減
+      sustain: 0.3,   // 30% 較低的維持音量
+      release: 0.3,   // 300ms 較短的釋音時間，避免回音
     },
-    filterFrequency: 8000, // 8kHz 低通濾波
+    filterFrequency: 4000, // 4kHz 低通濾波，去除高頻噪音
   };
   
   // 事件監聽器
@@ -127,14 +124,19 @@ export class AudioService {
       this.masterGainNode = this.audioContext.createGain();
       this.masterGainNode.gain.value = this.config.masterVolume;
       
-      // 建立低通濾波器（改善音質）
+      // 建立替代的動態處理 - 使用額外增益節點進行軟限幅
+      this.compressorNode = this.audioContext.createGain();
+      this.compressorNode.gain.value = 0.8; // 輕微降低增益以防止峰值
+      
+      // 建立低通濾波器（去除高頻噪音）
       this.filterNode = this.audioContext.createBiquadFilter();
       this.filterNode.type = 'lowpass';
       this.filterNode.frequency.value = this.config.filterFrequency;
-      this.filterNode.Q.value = 1;
+      this.filterNode.Q.value = 0.8; // 降低 Q 值，避免共振峰
       
-      // 連接音頻節點鏈
-      this.masterGainNode.connect(this.filterNode);
+      // 簡化連接：主音量 → 軟限幅器 → 濾波器 → 輸出
+      this.masterGainNode.connect(this.compressorNode);
+      this.compressorNode.connect(this.filterNode);
       this.filterNode.connect(this.audioContext.destination);
 
       this.isInitialized = true;
@@ -158,7 +160,7 @@ export class AudioService {
    * 初始化事件監聽器映射
    */
   private initializeEventListeners(): void {
-    const eventTypes: Array<keyof AudioServiceEvents> = [
+    const eventTypes: (keyof AudioServiceEvents)[] = [
       'noteStart', 'noteEnd', 'error', 'contextStateChange'
     ];
     
@@ -166,6 +168,7 @@ export class AudioService {
       this.eventListeners.set(eventType, new Set());
     });
   }
+
 
   // ========== 音符播放方法 ==========
 
@@ -194,39 +197,65 @@ export class AudioService {
       const frequency = PIANO_FREQUENCIES[noteId];
       const normalizedVelocity = Math.max(0.1, Math.min(1.0, velocity / 127));
       
-      // 建立振盪器（音頻源）
-      const oscillator = this.audioContext.createOscillator();
-      oscillator.type = 'sine'; // 使用正弦波作為基礎波形
-      oscillator.frequency.value = frequency;
-      
-      // 建立音量包絡節點
-      const gainNode = this.audioContext.createGain();
+      // 創建多個振盪器產生豐富的泛音結構
+      const oscillators: OscillatorNode[] = [];
+      const gainNodes: GainNode[] = [];
       const currentTime = this.audioContext.currentTime;
+      
+      // 定義泛音結構 (基音 + 泛音)
+      const harmonics = [
+        { ratio: 1.0, gain: 0.8 },    // 基音
+        { ratio: 2.0, gain: 0.4 },    // 二次泛音
+        { ratio: 3.0, gain: 0.2 },    // 三次泛音  
+        { ratio: 4.0, gain: 0.1 },    // 四次泛音
+        { ratio: 5.0, gain: 0.05 }    // 五次泛音
+      ];
       
       // 實作 ADSR 包絡
       const { attack, decay, sustain } = this.config.envelope;
-      const peakGain = normalizedVelocity * 0.3; // 限制最大音量防止破音
-      const sustainGain = peakGain * sustain;
+      const baseGain = normalizedVelocity * 0.15; // 進一步降低基礎音量
       
-      // 設定 ADSR 包絡曲線
-      gainNode.gain.setValueAtTime(0.001, currentTime); // 起始音量（避免點擊聲）
-      gainNode.gain.exponentialRampToValueAtTime(peakGain, currentTime + attack); // 起音階段
-      gainNode.gain.exponentialRampToValueAtTime(sustainGain, currentTime + attack + decay); // 衰減到維持音量
+      // 為每個泛音創建振盪器
+      harmonics.forEach((harmonic, index) => {
+        const oscillator = this.audioContext!.createOscillator();
+        const gainNode = this.audioContext!.createGain();
+        
+        // 設定頻率和波形
+        oscillator.frequency.value = frequency * harmonic.ratio;
+        oscillator.type = index === 0 ? 'triangle' : 'sine'; // 基音用三角波，泛音用正弦波
+        
+        // 計算該泛音的音量
+        const harmonicGain = baseGain * harmonic.gain;
+        const peakGain = harmonicGain;
+        const sustainGain = peakGain * sustain;
+        
+        // 設定 ADSR 包絡曲線
+        gainNode.gain.setValueAtTime(0.001, currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(peakGain, currentTime + attack);
+        gainNode.gain.exponentialRampToValueAtTime(sustainGain, currentTime + attack + decay);
+        
+        // 連接音頻節點
+        oscillator.connect(gainNode);
+        gainNode.connect(this.masterGainNode!);
+        
+        // 開始播放
+        oscillator.start(currentTime);
+        
+        // 存儲引用
+        oscillators.push(oscillator);
+        gainNodes.push(gainNode);
+      });
       
-      // 連接音頻節點
-      oscillator.connect(gainNode);
-      gainNode.connect(this.masterGainNode!);
-      
-      // 開始播放
-      oscillator.start(currentTime);
-      
-      // 記錄播放狀態
+      // 記錄播放狀態 - 使用第一個振盪器作為主要引用
       const playingNote: PlayingNote = {
         noteId,
-        source: oscillator,
-        gainNode,
+        source: oscillators[0],  // 主振盪器
+        gainNode: gainNodes[0],  // 主增益節點
         startTime: currentTime,
-        state: 'playing'
+        state: 'playing',
+        // 存儲所有振盪器和增益節點的引用
+        harmonicOscillators: oscillators,
+        harmonicGainNodes: gainNodes
       };
       
       this.playingNotes.set(noteId, playingNote);
@@ -267,12 +296,19 @@ export class AudioService {
       // 標記為停止狀態
       playingNote.state = 'stopping';
       
-      // 實作釋音包絡（Release）
-      playingNote.gainNode.gain.cancelScheduledValues(currentTime);
-      playingNote.gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + release);
+      // 實作釋音包絡（Release）- 處理所有振盪器
+      const harmonicOscillators = playingNote.harmonicOscillators || [playingNote.source];
+      const harmonicGainNodes = playingNote.harmonicGainNodes || [playingNote.gainNode];
       
-      // 安排停止振盪器
-      playingNote.source.stop(currentTime + release);
+      harmonicGainNodes.forEach(gainNode => {
+        gainNode.gain.cancelScheduledValues(currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + release);
+      });
+      
+      // 安排停止所有振盪器
+      harmonicOscillators.forEach(oscillator => {
+        oscillator.stop(currentTime + release);
+      });
       
       // 清理播放狀態
       setTimeout(() => {
@@ -482,6 +518,7 @@ export class AudioService {
       this.audioContext = null;
       this.masterGainNode = null;
       this.filterNode = null;
+      this.compressorNode = null;
       this.playingNotes.clear();
       this.isInitialized = false;
       
