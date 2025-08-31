@@ -15,7 +15,6 @@ import {
   View,
   Text,
   StyleSheet,
-  useColorScheme,
   GestureResponderEvent,
 } from 'react-native';
 import Animated, {
@@ -27,7 +26,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { PianoKeyConfig, NoteId } from '../../types';
-import { BLACK_KEY_COLORS } from '../../utils/colorScheme';
 import PianoKey from './PianoKey';
 
 // ========== 元件 Props 介面 ==========
@@ -66,32 +64,33 @@ export interface BlackKeyProps {
  */
 const BLACK_KEY_THEME = {
   /** 圓角半徑 */
-  borderRadius: 6,
+  borderRadius: 0,
   
   /** 邊框寬度 */
   borderWidth: 1,
   
-  /** 陰影配置 */
+  /** 基礎顏色配置 */
+  colors: {
+    normal: '#333333',
+    pressed: '#1A1A1A',
+    border: '#222222',
+    text: '#FFFFFF',
+  },
+  
+  /** 陰影配置 - 簡化 */
   shadow: {
-    elevation: 8,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    elevation: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   
-  /** 按壓時的陰影配置 */
+  /** 按壓時的陰影配置 - 簡化 */
   pressedShadow: {
-    elevation: 4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  
-  /** 內部陰影效果 */
-  innerShadow: {
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    elevation: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
 } as const;
 
@@ -114,8 +113,6 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
 }) => {
   // ========== Hooks ==========
   
-  const colorScheme = useColorScheme();
-  
   // 動畫值
   const pressAnimation = useSharedValue(0);
   const depthAnimation = useSharedValue(0);
@@ -126,20 +123,16 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
    * 計算黑鍵顏色方案
    */
   const blackKeyColors = useMemo(() => {
-    const theme = colorScheme === 'dark' ? 'dark' : 'light';
-    return BLACK_KEY_COLORS[theme];
-  }, [colorScheme]);
-
-  /**
-   * 計算漸層色彩
-   */
-  const gradientColors = useMemo(() => {
+    // 統一使用暗灰色主題
     return {
-      start: blackKeyColors.normal,
-      middle: isPressed ? '#4A4A4C' : '#3A3A3C',
-      end: isPressed ? blackKeyColors.pressed : blackKeyColors.border,
+      normal: BLACK_KEY_THEME.colors.normal,
+      pressed: BLACK_KEY_THEME.colors.pressed,
+      border: BLACK_KEY_THEME.colors.border,
+      text: BLACK_KEY_THEME.colors.text,
+      shadow: 'rgba(0, 0, 0, 0.3)',
     };
-  }, [blackKeyColors, isPressed]);
+  }, []);
+
 
   // ========== 動畫樣式 ==========
   
@@ -147,7 +140,7 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
    * 黑鍵容器動畫樣式
    */
   const animatedContainerStyle = useAnimatedStyle(() => {
-    const scale = withSpring(isPressed ? 0.95 : 1, {
+    const scale = withSpring(isPressed ? 0.98 : 1, {
       damping: 15,
       stiffness: 400,
     });
@@ -237,7 +230,6 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
       borderColor: blackKeyColors.border,
       shadowColor: blackKeyColors.shadow,
     },
-    BLACK_KEY_THEME.shadow,
   ], [width, height, blackKeyColors]);
 
   /**
@@ -264,14 +256,6 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
 
   // ========== 渲染內容 ==========
 
-  /**
-   * 渲染黑鍵光澤效果
-   */
-  const renderGlossEffect = () => (
-    <View style={styles.glossOverlay}>
-      <View style={[styles.glossHighlight, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]} />
-    </View>
-  );
 
   /**
    * 渲染黑鍵內容
@@ -295,8 +279,6 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
         )}
       </View>
       
-      {/* 光澤效果 */}
-      {renderGlossEffect()}
     </View>
   );
 
@@ -386,23 +368,6 @@ const styles = StyleSheet.create({
     textShadowRadius: 1,
   },
   
-  glossOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: BLACK_KEY_THEME.borderRadius,
-  },
-  
-  glossHighlight: {
-    position: 'absolute',
-    top: '10%',
-    left: '20%',
-    right: '20%',
-    height: '30%',
-    borderRadius: 2,
-  },
 });
 
 // ========== 顯示名稱 ==========

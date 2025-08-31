@@ -15,7 +15,6 @@ import {
   View,
   Text,
   StyleSheet,
-  useColorScheme,
   GestureResponderEvent,
 } from 'react-native';
 import Animated, {
@@ -27,7 +26,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { PianoKeyConfig, NoteId } from '../../types';
-import { getPitchRangeDynamicColor, PITCH_RANGE_COLORS } from '../../utils/colorScheme';
 import PianoKey from './PianoKey';
 
 // ========== 元件 Props 介面 ==========
@@ -69,25 +67,33 @@ export interface WhiteKeyProps {
  */
 const WHITE_KEY_THEME = {
   /** 圓角半徑 */
-  borderRadius: 8,
+  borderRadius: 0,
   
   /** 邊框寬度 */
-  borderWidth: 1.5,
+  borderWidth: 1,
   
-  /** 陰影配置 */
-  shadow: {
-    elevation: 4,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  /** 基礎顏色配置 */
+  colors: {
+    normal: '#E5E5E5',
+    pressed: '#D0D0D0',
+    border: '#CCCCCC',
+    text: '#333333',
   },
   
-  /** 按壓時的陰影配置 */
-  pressedShadow: {
-    elevation: 2,
+  /** 陰影配置 - 簡化 */
+  shadow: {
+    elevation: 1,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  
+  /** 按壓時的陰影配置 - 簡化 */
+  pressedShadow: {
+    elevation: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
 } as const;
 
@@ -111,8 +117,6 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
 }) => {
   // ========== Hooks ==========
   
-  const colorScheme = useColorScheme();
-  
   // 動畫值
   const pressAnimation = useSharedValue(0);
   const glowAnimation = useSharedValue(0);
@@ -123,30 +127,17 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
    * 計算白鍵顏色方案
    */
   const whiteKeyColors = useMemo(() => {
-    if (useColorCoding) {
-      const pitchColors = PITCH_RANGE_COLORS[keyConfig.pitchRange];
-      return {
-        normal: pitchColors.primary,
-        pressed: pitchColors.secondary,
-        accent: pitchColors.accent,
-        background: pitchColors.background,
-        text: pitchColors.text,
-        border: pitchColors.accent,
-        shadow: pitchColors.shadow,
-      };
-    }
-    
-    // 預設白鍵顏色
+    // 統一使用淺灰色主題，不再依賴顏色編碼
     return {
-      normal: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.95)' : '#FFFFFF',
-      pressed: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.8)' : '#F0F0F0',
-      accent: colorScheme === 'dark' ? '#FFFFFF' : '#E0E0E0',
-      background: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#FAFAFA',
-      text: colorScheme === 'dark' ? '#000000' : '#333333',
-      border: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#CCCCCC',
-      shadow: colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.2)',
+      normal: WHITE_KEY_THEME.colors.normal,
+      pressed: WHITE_KEY_THEME.colors.pressed,
+      accent: WHITE_KEY_THEME.colors.normal,
+      background: WHITE_KEY_THEME.colors.normal,
+      text: WHITE_KEY_THEME.colors.text,
+      border: WHITE_KEY_THEME.colors.border,
+      shadow: 'rgba(0, 0, 0, 0.1)',
     };
-  }, [keyConfig.pitchRange, useColorCoding, colorScheme]);
+  }, []);
 
   // ========== 動畫樣式 ==========
   
@@ -154,14 +145,13 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
    * 白鍵容器動畫樣式
    */
   const animatedContainerStyle = useAnimatedStyle(() => {
-    const scale = interpolateColor(
-      pressAnimation.value,
-      [0, 1],
-      [1, 0.97]
-    );
+    const scale = withSpring(isPressed ? 0.98 : 1, {
+      damping: 15,
+      stiffness: 300,
+    });
     
     return {
-      transform: [{ scale: typeof scale === 'string' ? 1 : scale }],
+      transform: [{ scale }],
       elevation: isPressed ? WHITE_KEY_THEME.pressedShadow.elevation : WHITE_KEY_THEME.shadow.elevation,
     };
   });
@@ -246,7 +236,6 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
       borderColor: whiteKeyColors.border,
       shadowColor: whiteKeyColors.shadow,
     },
-    WHITE_KEY_THEME.shadow,
   ], [width, height, whiteKeyColors]);
 
   /**
@@ -274,19 +263,10 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
   // ========== 渲染內容 ==========
 
   /**
-   * 渲染音域指示器（小圓點）
+   * 渲染音域指示器（小圓點）- 保持簡潔設計
    */
   const renderPitchIndicator = () => {
-    if (!useColorCoding) return null;
-    
-    return (
-      <View 
-        style={[
-          styles.pitchIndicator, 
-          { backgroundColor: whiteKeyColors.accent }
-        ]} 
-      />
-    );
+    return null; // 移除音域指示器以符合簡潔設計
   };
 
   /**
