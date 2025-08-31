@@ -45,7 +45,7 @@ import type {
 import { getThemeColors } from '../utils/colorScheme';
 import AudioService from '../services/AudioService';
 
-import PianoKeyboard from '../components/Piano/PianoKeyboard';
+import SimplePianoKeyboard from '../components/Piano/SimplePianoKeyboard';
 import TopBar from '../components/UI/TopBar';
 
 // ========== 介面 Props 定義 ==========
@@ -120,11 +120,6 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
   useEffect(() => {
     const initializeScreen = async () => {
       try {
-        // 鎖定橫向顯示
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE_LEFT
-        );
-        
         // 啟動入場動畫
         screenOpacity.value = withTiming(1, { 
           duration: 800,
@@ -155,9 +150,6 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
       
       // 停止所有音符
       audioService.stopAllNotes();
-      
-      // 解鎖螢幕方向
-      ScreenOrientation.unlockAsync();
     };
   }, []);
 
@@ -391,16 +383,10 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
       <View style={styles.keyboardArea}>
         <Animated.View style={[styles.keyboardContainer, animatedKeyboardStyle]}>
           {isKeyboardReady && (
-            <PianoKeyboard
-              showSolfege={appSettings.showSolfege}
-              showNoteName={appSettings.showNoteNames}
-              useColorCoding={appSettings.colorCoding}
-              hapticFeedback={appSettings.hapticFeedback}
-              masterVolume={appSettings.masterVolume}
-              onKeyboardInteraction={handleKeyboardInteraction}
+            <SimplePianoKeyboard
               onNoteStart={handleNoteStart}
               onNoteEnd={handleNoteEnd}
-              onAudioError={handleAudioError}
+              onError={handleAudioError}
             />
           )}
         </Animated.View>

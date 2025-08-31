@@ -187,15 +187,25 @@ export function getWhiteKeyCount(noteIds: NoteId[]): number {
 /**
  * 計算鍵盤的尺寸參數
  * 
+ * @param containerWidth 容器寬度
+ * @param containerHeight 容器高度
  * @returns 鍵盤尺寸配置
  */
-export function calculateKeyboardDimensions() {
+export function calculateKeyboardDimensions(
+  containerWidth?: number, 
+  containerHeight?: number
+) {
   const whiteKeyCount = getWhiteKeyCount(SUPPORTED_NOTE_RANGE);
-  const keyboardWidth = SCREEN_WIDTH * LAYOUT_CONSTANTS.KEYBOARD_WIDTH_RATIO;
   
-  // 計算白鍵尺寸
-  const whiteKeyWidth = (keyboardWidth - (whiteKeyCount - 1) * LAYOUT_CONSTANTS.KEY_GAP) / whiteKeyCount;
-  const whiteKeyHeight = SCREEN_HEIGHT * LAYOUT_CONSTANTS.WHITE_KEY_HEIGHT_RATIO;
+  // 使用傳入的尺寸或預設螢幕尺寸
+  const availableWidth = containerWidth || SCREEN_WIDTH;
+  const availableHeight = containerHeight || SCREEN_HEIGHT;
+  
+  const keyboardWidth = availableWidth * LAYOUT_CONSTANTS.KEYBOARD_WIDTH_RATIO;
+  
+  // 計算白鍵尺寸 - 確保有足夠的空間
+  const whiteKeyWidth = Math.max(30, (keyboardWidth - (whiteKeyCount - 1) * LAYOUT_CONSTANTS.KEY_GAP) / whiteKeyCount);
+  const whiteKeyHeight = Math.max(120, availableHeight * LAYOUT_CONSTANTS.WHITE_KEY_HEIGHT_RATIO);
   
   // 計算黑鍵尺寸
   const blackKeyWidth = whiteKeyWidth * LAYOUT_CONSTANTS.BLACK_KEY_WIDTH_RATIO;
@@ -246,35 +256,29 @@ export function calculateBlackKeyOffset(
 /**
  * 生成完整的鋼琴鍵盤配置
  * 
+ * @param containerWidth 容器寬度
+ * @param containerHeight 容器高度
  * @returns 鍵盤佈局配置
  */
-export function generateKeyboardLayout(): KeyboardLayout {
-  const dimensions = calculateKeyboardDimensions();
+export function generateKeyboardLayout(
+  containerWidth?: number,
+  containerHeight?: number
+): KeyboardLayout {
+  const dimensions = calculateKeyboardDimensions(containerWidth, containerHeight);
   const keys: PianoKeyConfig[] = [];
   
   let whiteKeyIndex = 0;
   
   // 遍歷所有支援的音符，生成琴鍵配置
   SUPPORTED_NOTE_RANGE.forEach((noteId, index) => {
-    const { noteName, octave } = parseNoteId(noteId);
+    const { noteName } = parseNoteId(noteId);
     const keyType: KeyType = isBlackKey(noteName) ? 'black' : 'white';
     const pitchRange = getPitchRange(noteId);
     const frequency = PIANO_FREQUENCIES[noteId];
     const solfege = getSolfege(noteName.replace('#', '') as NoteName);
     
-    // 計算琴鍵位置
-    let xPosition: number;
     if (keyType === 'white') {
-      xPosition = whiteKeyIndex * (dimensions.whiteKeyWidth + LAYOUT_CONSTANTS.KEY_GAP);
       whiteKeyIndex++;
-    } else {
-      // 黑鍵位置基於前一個白鍵位置
-      const prevWhiteKeyX = (whiteKeyIndex - 1) * (dimensions.whiteKeyWidth + LAYOUT_CONSTANTS.KEY_GAP);
-      xPosition = prevWhiteKeyX + calculateBlackKeyOffset(
-        noteName, 
-        dimensions.whiteKeyWidth, 
-        dimensions.blackKeyWidth
-      );
     }
     
     const keyConfig: PianoKeyConfig = {

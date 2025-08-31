@@ -5,7 +5,9 @@
       "mcp__Context7__get-library-docs",
       "Bash(npm install:*)",
       "Bash(npm run lint)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
