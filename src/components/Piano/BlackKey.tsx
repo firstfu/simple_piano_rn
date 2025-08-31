@@ -186,7 +186,7 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
   /**
    * 處理按鍵按下事件（增強版）
    */
-  const handlePressIn = (event: GestureResponderEvent) => {
+  const handlePressIn = (noteId: NoteId, event: GestureResponderEvent) => {
     // 啟動按壓動畫
     pressAnimation.value = withSpring(1, {
       damping: 20,
@@ -197,13 +197,13 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
     depthAnimation.value = withTiming(1, { duration: 100 });
     
     // 執行外部回調
-    onPressIn?.(keyConfig.noteId, event);
+    onPressIn?.(noteId, event);
   };
 
   /**
    * 處理按鍵釋放事件（增強版）
    */
-  const handlePressOut = (event: GestureResponderEvent) => {
+  const handlePressOut = (noteId: NoteId, event: GestureResponderEvent) => {
     // 恢復動畫
     pressAnimation.value = withSpring(0, {
       damping: 15,
@@ -214,7 +214,7 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
     depthAnimation.value = withTiming(0, { duration: 150 });
     
     // 執行外部回調
-    onPressOut?.(keyConfig.noteId, event);
+    onPressOut?.(noteId, event);
   };
 
   // ========== 樣式計算 ==========
@@ -292,8 +292,8 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
           width={width}
           height={height}
           isPressed={isPressed}
-          showSolfege={false} // 由自定義內容處理
-          showNoteName={false} // 由自定義內容處理
+          showSolfege={showSolfege}
+          showNoteName={showNoteName}
           useColorCoding={false} // 黑鍵不使用顏色編碼
           hapticFeedback={hapticFeedback}
           onPressIn={handlePressIn}

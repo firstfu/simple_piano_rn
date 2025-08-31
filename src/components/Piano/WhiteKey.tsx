@@ -190,7 +190,7 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
   /**
    * 處理按鍵按下事件（增強版）
    */
-  const handlePressIn = (event: GestureResponderEvent) => {
+  const handlePressIn = (noteId: NoteId, event: GestureResponderEvent) => {
     // 啟動按壓動畫
     pressAnimation.value = withSpring(1, {
       damping: 15,
@@ -203,13 +203,13 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
     }
     
     // 執行外部回調
-    onPressIn?.(keyConfig.noteId, event);
+    onPressIn?.(noteId, event);
   };
 
   /**
    * 處理按鍵釋放事件（增強版）
    */
-  const handlePressOut = (event: GestureResponderEvent) => {
+  const handlePressOut = (noteId: NoteId, event: GestureResponderEvent) => {
     // 恢復動畫
     pressAnimation.value = withSpring(0, {
       damping: 12,
@@ -220,7 +220,7 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
     glowAnimation.value = withTiming(0, { duration: 300 });
     
     // 執行外部回調
-    onPressOut?.(keyConfig.noteId, event);
+    onPressOut?.(noteId, event);
   };
 
   // ========== 樣式計算 ==========

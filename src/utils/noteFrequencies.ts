@@ -55,31 +55,31 @@ export const NOTE_TO_SEMITONE_OFFSET: Record<NoteName, number> = {
  * 音符名稱到簡譜標記的映射
  */
 export const NOTE_TO_SOLFEGE: Record<NoteName, SolfegeNote> = {
-  'C': 'Do',
-  'C#': 'Do',   // #號音使用原音名
-  'D': 'Re',
-  'D#': 'Re',   // #號音使用原音名
-  'E': 'Mi',
-  'F': 'Fa',
-  'F#': 'Fa',   // #號音使用原音名
-  'G': 'Sol',
-  'G#': 'Sol',  // #號音使用原音名
-  'A': 'La',
-  'A#': 'La',   // #號音使用原音名
-  'B': 'Si',
+  'C': '1',
+  'C#': '1',   // #號音使用原音名
+  'D': '2',
+  'D#': '2',   // #號音使用原音名
+  'E': '3',
+  'F': '4',
+  'F#': '4',   // #號音使用原音名
+  'G': '5',
+  'G#': '5',  // #號音使用原音名
+  'A': '6',
+  'A#': '6',   // #號音使用原音名
+  'B': '7',
 };
 
 /**
  * 簡譜標記到音符名稱的反向映射
  */
 export const SOLFEGE_TO_NOTE: Record<SolfegeNote, NoteName> = {
-  'Do': 'C',
-  'Re': 'D',
-  'Mi': 'E',
-  'Fa': 'F',
-  'Sol': 'G',
-  'La': 'A',
-  'Si': 'B',
+  '1': 'C',
+  '2': 'D',
+  '3': 'E',
+  '4': 'F',
+  '5': 'G',
+  '6': 'A',
+  '7': 'B',
 };
 
 // ========== 頻率計算函數 ==========

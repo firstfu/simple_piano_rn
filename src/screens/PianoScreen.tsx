@@ -109,7 +109,7 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
   const keyboardScale = useSharedValue(0.9);
   
   // Refs
-  const recordingTimer = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimer = useRef<number | null>(null);
   const recordingStartTime = useRef<number>(0);
   
   // ========== 初始化和清理 ==========

@@ -323,7 +323,7 @@ const Timer: React.FC<TimerProps> = memo(({
       statusColor = BASE_COLORS.success;
     } else if (isPaused) {
       statusText = '⏸ PAUSE';
-      statusColor = BASE_COLORS.warning;
+      statusColor = BASE_COLORS.warning as any;
     }
     
     return (

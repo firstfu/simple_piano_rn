@@ -21,10 +21,10 @@ export type NoteName =
 
 /**
  * 簡譜標記類型
- * 對應 Do, Re, Mi, Fa, Sol, La, Si 七個音級
+ * 對應 1, 2, 3, 4, 5, 6, 7 七個音級數字
  */
 export type SolfegeNote = 
-  | 'Do' | 'Re' | 'Mi' | 'Fa' | 'Sol' | 'La' | 'Si';
+  | '1' | '2' | '3' | '4' | '5' | '6' | '7';
 
 /**
  * 音符完整標識類型

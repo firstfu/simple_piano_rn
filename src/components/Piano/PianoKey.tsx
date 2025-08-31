@@ -18,7 +18,7 @@ import {
   useColorScheme,
   GestureResponderEvent,
 } from 'react-native';
-import { Haptics } from 'expo-haptics';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -366,8 +366,8 @@ const styles = StyleSheet.create({
   },
   
   keyLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 1 },

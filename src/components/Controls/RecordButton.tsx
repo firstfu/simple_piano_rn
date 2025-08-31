@@ -23,7 +23,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { Haptics } from 'expo-haptics';
+import * as Haptics from 'expo-haptics';
 
 import type { RecordingState } from '../../types';
 import { getThemeColors, BASE_COLORS } from '../../utils/colorScheme';
