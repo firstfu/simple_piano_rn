@@ -102,18 +102,14 @@ export type AudioNodeState = 'idle' | 'playing' | 'stopping';
 export interface PlayingNote {
   /** 音符標識 */
   noteId: NoteId;
-  /** 主要音頻源節點 */
-  source: any; // AudioBufferSourceNode from react-native-audio-api
-  /** 主要音量包絡節點 */
+  /** 音頻源節點 */
+  source: any; // OscillatorNode from react-native-audio-api
+  /** 音量包絡節點 */
   gainNode: any; // GainNode from react-native-audio-api
   /** 開始播放時間 */
   startTime: number;
   /** 節點狀態 */
   state: AudioNodeState;
-  /** 泛音振盪器陣列 (可選) */
-  harmonicOscillators?: any[];
-  /** 泛音增益節點陣列 (可選) */
-  harmonicGainNodes?: any[];
 }
 
 /**
