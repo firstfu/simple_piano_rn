@@ -62,20 +62,24 @@ export class AudioService {
   private playingNotes: Map<NoteId, PlayingNote> = new Map();
   private isInitialized: boolean = false;
   
-  // 配置參數
+  // 配置參數 - 平衡音量和穩定性
   private config: AudioServiceConfig = {
-    masterVolume: 0.2,  // 進一步降低主音量避免破音
+    masterVolume: 0.4,  // 適度提高主音量
     envelope: {
-      attack: 0.05,   // 50ms 較長的起音時間避免點擊聲
-      decay: 0.2,     // 200ms 衰減時間
-      sustain: 0.4,   // 40% 維持音量
-      release: 0.5,   // 500ms 釋音時間
+      attack: 0.05,   // 50ms 起音時間
+      decay: 0.2,     // 適中的衰減
+      sustain: 0.7,   // 70% 維持音量
+      release: 0.3,   // 300ms 釋放時間
     },
-    filterFrequency: 3000, // 3kHz 更保守的低通濾波
+    filterFrequency: 4000, // 4kHz 濾波，保留更多高頻
   };
   
   // 事件監聽器
   private eventListeners: Map<keyof AudioServiceEvents, Set<Function>> = new Map();
+  
+  // 防崩潰機制
+  private cleanupTimer: number | null = null;
+  private lastCleanupTime: number = 0;
 
   // ========== 單例模式實作 ==========
 
@@ -140,6 +144,9 @@ export class AudioService {
 
       this.isInitialized = true;
       
+      // 啟動定期清理機制防止記憶體洩漏
+      this.startPeriodicCleanup();
+      
       console.log('AudioService 初始化成功');
       this.emit('contextStateChange', { state: this.audioContext.state });
       
@@ -188,10 +195,16 @@ export class AudioService {
         throw new Error(`不支援的音符: ${noteId}`);
       }
 
-      // 限制同時播放的音符數量，避免音量疊加
-      const maxConcurrentNotes = 8;
+      // 適中的同時播放限制，平衡音量和穩定性
+      const maxConcurrentNotes = 6; // 提高到 6 個
       if (this.playingNotes.size >= maxConcurrentNotes) {
         console.warn(`達到最大同時播放音符數量 (${maxConcurrentNotes})，忽略新音符: ${noteId}`);
+        return false;
+      }
+      
+      // 檢查 AudioContext 狀態
+      if (!this.audioContext || this.audioContext.state === 'closed') {
+        console.error('AudioContext 不可用或已關閉');
         return false;
       }
 
@@ -205,8 +218,8 @@ export class AudioService {
       const frequency = PIANO_FREQUENCIES[noteId];
       const normalizedVelocity = Math.max(0.1, Math.min(1.0, velocity / 127));
       
-      // 根據當前播放音符數量動態調整音量，避免削峰
-      const volumeReduction = Math.max(0.3, 1.0 - (this.playingNotes.size * 0.1));
+      // 減少音量動態調整的影響
+      const volumeReduction = Math.max(0.6, 1.0 - (this.playingNotes.size * 0.05)); // 更温和的調整
       
       // 使用單一振盪器避免音量疊加和複雜度
       const oscillator = this.audioContext.createOscillator();
@@ -219,7 +232,7 @@ export class AudioService {
       
       // 實作 ADSR 包絡
       const { attack, decay, sustain } = this.config.envelope;
-      const baseGain = normalizedVelocity * 0.08 * volumeReduction; // 進一步降低基礎音量
+      const baseGain = normalizedVelocity * 0.15 * volumeReduction; // 適度提高基礎音量
       const peakGain = baseGain;
       const sustainGain = peakGain * sustain;
       
@@ -282,38 +295,24 @@ export class AudioService {
       }
 
       const currentTime = this.audioContext.currentTime;
-      const { release } = this.config.envelope;
       
       // 標記為停止狀態
       playingNote.state = 'stopping';
       
+      // 簡化的釋音處理，直接停止
       try {
-        // 實作釋音包絡（Release）- 使用 try-catch 避免調度錯誤
-        playingNote.gainNode.gain.cancelScheduledValues(currentTime);
-        playingNote.gainNode.gain.setValueAtTime(playingNote.gainNode.gain.value, currentTime);
-        playingNote.gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + release);
-        
-        // 安排停止振盪器 - 確保在淡出完成後停止
-        playingNote.source.stop(currentTime + release + 0.1); // 額外 100ms 緩衝
-        
-      } catch (nodeError) {
-        // 如果節點調度失敗，直接停止振盪器
-        console.warn(`音頻節點調度失敗，直接停止: ${noteId}`, nodeError);
-        try {
-          playingNote.source.stop();
-        } catch (stopError) {
-          // 振盪器可能已經停止，忽略錯誤
-          console.warn(`振盪器停止失敗: ${noteId}`, stopError);
-        }
+        // 直接停止振盪器，不使用複雜的淡出
+        playingNote.source.stop(currentTime);
+      } catch (stopError) {
+        // 如果節點已經停止，忽略錯誤
+        console.warn(`振盪器停止失敗: ${noteId}`, stopError);
       }
       
-      // 立即清理播放狀態，不等待 setTimeout
+      // 立即清理播放狀態
       this.playingNotes.delete(noteId);
       
-      // 使用 setTimeout 清理任何殘留的事件監聽器
-      setTimeout(() => {
-        this.emit('noteEnd', { noteId, timestamp: Date.now() });
-      }, Math.max(release * 1000, 100)); // 至少 100ms
+      // 直接發送事件，不使用 setTimeout
+      this.emit('noteEnd', { noteId, timestamp: Date.now() });
       
       console.log(`停止播放音符: ${noteId}`);
       return true;
@@ -498,6 +497,60 @@ export class AudioService {
     }
   }
 
+  // ========== 防崩潰和清理方法 ==========
+
+  /**
+   * 啟動定期清理機制
+   */
+  private startPeriodicCleanup(): void {
+    // 每 10 秒檢查一次是否需要清理
+    this.cleanupTimer = setInterval(() => {
+      this.performPeriodicCleanup();
+    }, 10000);
+  }
+
+  /**
+   * 執行定期清理
+   */
+  private performPeriodicCleanup(): void {
+    try {
+      const now = Date.now();
+      
+      // 如果超過 30 秒沒有清理過，執行清理
+      if (now - this.lastCleanupTime > 30000) {
+        console.log('執行定期清理...');
+        
+        // 檢查並清理過期的播放狀態
+        const staleNotes: NoteId[] = [];
+        this.playingNotes.forEach((playingNote, noteId) => {
+          // 如果音符播放超過 10 秒，視為異常
+          if (now - playingNote.startTime * 1000 > 10000) {
+            staleNotes.push(noteId);
+          }
+        });
+        
+        // 清理過期音符
+        staleNotes.forEach(noteId => {
+          console.warn(`清理過期音符: ${noteId}`);
+          try {
+            const playingNote = this.playingNotes.get(noteId);
+            if (playingNote) {
+              playingNote.source.stop();
+            }
+          } catch (error) {
+            console.warn(`清理過期音符失敗: ${noteId}`, error);
+          }
+          this.playingNotes.delete(noteId);
+        });
+        
+        this.lastCleanupTime = now;
+        console.log(`定期清理完成，當前播放音符數量: ${this.playingNotes.size}`);
+      }
+    } catch (error) {
+      console.error('定期清理失敗:', error);
+    }
+  }
+
   // ========== 清理方法 ==========
 
   /**
@@ -522,6 +575,12 @@ export class AudioService {
       this.compressorNode = null;
       this.playingNotes.clear();
       this.isInitialized = false;
+      
+      // 清理定期清理 timer
+      if (this.cleanupTimer) {
+        clearInterval(this.cleanupTimer);
+        this.cleanupTimer = null;
+      }
       
       // 清理事件監聽器
       this.eventListeners.forEach(listeners => listeners.clear());
