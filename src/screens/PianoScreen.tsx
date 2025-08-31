@@ -120,6 +120,9 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
   useEffect(() => {
     const initializeScreen = async () => {
       try {
+        // 強制鎖定為橫向模式
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        
         // 啟動入場動畫
         screenOpacity.value = withTiming(1, { 
           duration: 800,
@@ -365,7 +368,7 @@ const PianoScreen: React.FC<PianoScreenProps> = ({
 
   return (
     <Animated.View style={[containerStyle, animatedScreenStyle]}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} hidden={false} />
       
       {/* 頂部工具列 */}
       <TopBar

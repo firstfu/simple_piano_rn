@@ -36,11 +36,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
  * 鍵盤佈局比例設定
  */
 export const LAYOUT_CONSTANTS = {
-  /** 鍵盤佔螢幕寬度的比例 */
-  KEYBOARD_WIDTH_RATIO: 0.95,
+  /** 鍵盤佔螢幕寬度的比例（橫向模式下使用更多寬度）*/
+  KEYBOARD_WIDTH_RATIO: 0.98,
   
-  /** 白鍵高度佔螢幕高度的比例 */
-  WHITE_KEY_HEIGHT_RATIO: 0.6,
+  /** 白鍵高度佔螢幕高度的比例（橫向模式下使用更多高度）*/
+  WHITE_KEY_HEIGHT_RATIO: 0.75,
   
   /** 黑鍵高度相對於白鍵的比例 */
   BLACK_KEY_HEIGHT_RATIO: 0.65,
@@ -52,7 +52,7 @@ export const LAYOUT_CONSTANTS = {
   KEY_BORDER_RADIUS: 8,
   
   /** 琴鍵之間的間隙 */
-  KEY_GAP: 2,
+  KEY_GAP: 1,
 } as const;
 
 /**

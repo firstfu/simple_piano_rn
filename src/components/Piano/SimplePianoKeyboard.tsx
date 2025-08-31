@@ -269,8 +269,10 @@ const styles = StyleSheet.create({
   whiteKeysContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'center',
-    gap: 2,
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 5,
+    gap: 1,
   },
   
   blackKeysContainer: {

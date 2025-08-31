@@ -3,7 +3,7 @@
     "name": "simple_piano_rn",
     "slug": "simple_piano_rn",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/images/icon.png",
     "scheme": "simplepianorn",
     "userInterfaceStyle": "automatic",
