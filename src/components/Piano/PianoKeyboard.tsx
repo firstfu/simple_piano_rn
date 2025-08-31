@@ -411,8 +411,16 @@ const styles = StyleSheet.create({
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 15,
+    // 鋼琴木紋背景效果
+    backgroundColor: '#2C1810',
+    borderRadius: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   
   whiteKeysContainer: {

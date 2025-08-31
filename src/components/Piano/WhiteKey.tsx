@@ -66,34 +66,56 @@ export interface WhiteKeyProps {
  * 白鍵樣式主題配置
  */
 const WHITE_KEY_THEME = {
-  /** 圓角半徑 */
-  borderRadius: 0,
-  
-  /** 邊框寬度 */
-  borderWidth: 1,
-  
-  /** 基礎顏色配置 */
-  colors: {
-    normal: '#E5E5E5',
-    pressed: '#D0D0D0',
-    border: '#CCCCCC',
-    text: '#333333',
+  /** 圓角半徑 - 底部圓角 */
+  borderRadius: {
+    top: 0,
+    bottom: 3,
   },
   
-  /** 陰影配置 - 簡化 */
+  /** 基礎顏色配置 - 象牙白色系 */
+  colors: {
+    normal: {
+      start: '#FFFFFF',      // 純白色頂部
+      middle: '#FDFCF8',     // 象牙白中部
+      end: '#F5F3F0',        // 淡象牙白底部
+    },
+    pressed: {
+      start: '#F8F8F8',      // 按壓時稍微暗化
+      middle: '#F0EDE8',     
+      end: '#E8E5E0',        
+    },
+    highlight: 'rgba(255, 255, 255, 0.8)',  // 高光效果
+    text: '#333333',
+    separatorShadow: 'rgba(0, 0, 0, 0.15)', // 分隔陰影
+  },
+  
+  /** 立體陰影配置 */
   shadow: {
+    // 主要陰影 - 創造深度
+    primary: {
+      elevation: 3,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      shadowColor: '#000000',
+    },
+    // 右側分隔陰影
+    separator: {
+      elevation: 1,
+      shadowOffset: { width: 1, height: 0 },
+      shadowOpacity: 0.1,
+      shadowRadius: 1,
+      shadowColor: '#000000',
+    },
+  },
+  
+  /** 按壓時的陰影配置 */
+  pressedShadow: {
     elevation: 1,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  
-  /** 按壓時的陰影配置 - 簡化 */
-  pressedShadow: {
-    elevation: 0,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    shadowColor: '#000000',
   },
 } as const;
 
@@ -127,22 +149,22 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
    * 計算白鍵顏色方案
    */
   const whiteKeyColors = useMemo(() => {
-    // 統一使用淺灰色主題，不再依賴顏色編碼
+    // 象牙白色系主題
     return {
-      normal: WHITE_KEY_THEME.colors.normal,
-      pressed: WHITE_KEY_THEME.colors.pressed,
-      accent: WHITE_KEY_THEME.colors.normal,
-      background: WHITE_KEY_THEME.colors.normal,
+      normal: WHITE_KEY_THEME.colors.normal.start,
+      pressed: WHITE_KEY_THEME.colors.pressed.start,
+      accent: WHITE_KEY_THEME.colors.normal.start,
+      background: WHITE_KEY_THEME.colors.normal.start,
       text: WHITE_KEY_THEME.colors.text,
-      border: WHITE_KEY_THEME.colors.border,
-      shadow: 'rgba(0, 0, 0, 0.1)',
+      border: WHITE_KEY_THEME.colors.separatorShadow,
+      shadow: WHITE_KEY_THEME.colors.separatorShadow,
     };
   }, []);
 
   // ========== 動畫樣式 ==========
   
   /**
-   * 白鍵容器動畫樣式
+   * 白鍵容器動畫樣式 - 3D 效果
    */
   const animatedContainerStyle = useAnimatedStyle(() => {
     const scale = withSpring(isPressed ? 0.98 : 1, {
@@ -150,14 +172,26 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
       stiffness: 300,
     });
     
+    const rotateX = withSpring(isPressed ? -2 : 0, {
+      damping: 15,
+      stiffness: 400,
+    });
+    
     return {
-      transform: [{ scale }],
-      elevation: isPressed ? WHITE_KEY_THEME.pressedShadow.elevation : WHITE_KEY_THEME.shadow.elevation,
+      transform: [
+        { scale },
+        { rotateX: `${rotateX}deg` },
+      ],
+      elevation: isPressed ? WHITE_KEY_THEME.pressedShadow.elevation : WHITE_KEY_THEME.shadow.primary.elevation,
+      shadowOffset: isPressed ? WHITE_KEY_THEME.pressedShadow.shadowOffset : WHITE_KEY_THEME.shadow.primary.shadowOffset,
+      shadowOpacity: isPressed ? WHITE_KEY_THEME.pressedShadow.shadowOpacity : WHITE_KEY_THEME.shadow.primary.shadowOpacity,
+      shadowRadius: isPressed ? WHITE_KEY_THEME.pressedShadow.shadowRadius : WHITE_KEY_THEME.shadow.primary.shadowRadius,
+      shadowColor: WHITE_KEY_THEME.shadow.primary.shadowColor,
     };
   });
 
   /**
-   * 白鍵背景動畫樣式
+   * 白鍵背景動畫樣式 - 漸層效果
    */
   const animatedBackgroundStyle = useAnimatedStyle(() => {
     const backgroundColor = interpolateColor(
@@ -172,16 +206,13 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
   });
 
   /**
-   * 發光效果動畫樣式
+   * 高光效果動畫樣式
    */
-  const animatedGlowStyle = useAnimatedStyle(() => {
-    const opacity = glowAnimation.value;
+  const animatedHighlightStyle = useAnimatedStyle(() => {
+    const opacity = withTiming(isPressed ? 0.6 : 1, { duration: 150 });
     
     return {
       opacity,
-      shadowColor: whiteKeyColors.accent,
-      shadowOpacity: opacity * 0.5,
-      shadowRadius: opacity * 8,
     };
   });
 
@@ -228,37 +259,34 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
   /**
    * 白鍵專用樣式
    */
-  const whiteKeyStyle = useMemo(() => [
-    styles.whiteKeyContainer,
-    {
-      width,
-      height,
-      borderColor: whiteKeyColors.border,
-      shadowColor: whiteKeyColors.shadow,
-    },
-  ], [width, height, whiteKeyColors]);
+  const whiteKeyStyle = useMemo(() => ({
+    width,
+    height,
+    borderBottomLeftRadius: WHITE_KEY_THEME.borderRadius.bottom,
+    borderBottomRightRadius: WHITE_KEY_THEME.borderRadius.bottom,
+    borderRightWidth: 0.5,
+    borderRightColor: whiteKeyColors.border,
+    backgroundColor: whiteKeyColors.normal,
+    overflow: 'hidden' as const,
+  }), [width, height, whiteKeyColors]);
 
   /**
    * 簡譜標記文字樣式
    */
-  const solfegeTextStyle = useMemo(() => [
-    styles.solfegeText,
-    {
-      color: whiteKeyColors.text,
-      fontSize: Math.min(width * 0.2, 16), // 根據鍵寬動態調整字體大小
-    }
-  ], [whiteKeyColors.text, width]);
+  const solfegeTextStyle = useMemo(() => ({
+    ...styles.solfegeText,
+    color: whiteKeyColors.text,
+    fontSize: Math.min(width * 0.2, 16), // 根據鍵寬動態調整字體大小
+  }), [whiteKeyColors.text, width]);
 
   /**
    * 音符名稱文字樣式
    */
-  const noteNameTextStyle = useMemo(() => [
-    styles.noteNameText,
-    {
-      color: whiteKeyColors.text,
-      fontSize: Math.min(width * 0.15, 12),
-    }
-  ], [whiteKeyColors.text, width]);
+  const noteNameTextStyle = useMemo(() => ({
+    ...styles.noteNameText,
+    color: whiteKeyColors.text,
+    fontSize: Math.min(width * 0.15, 12),
+  }), [whiteKeyColors.text, width]);
 
   // ========== 渲染內容 ==========
 
@@ -299,7 +327,7 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
   // ========== 主要渲染 ==========
 
   return (
-    <Animated.View style={[whiteKeyStyle, animatedContainerStyle, animatedGlowStyle]}>
+    <Animated.View style={[whiteKeyStyle, animatedContainerStyle]}>
       <PianoKey
         keyConfig={keyConfig}
         width={width}
@@ -314,8 +342,8 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
         style={animatedBackgroundStyle}
       />
       
-      {/* 額外的白鍵裝飾 */}
-      <Animated.View style={[styles.whiteKeyOverlay, animatedBackgroundStyle]}>
+      {/* 白鍵高光效果層 */}
+      <Animated.View style={[styles.whiteKeyOverlay, animatedHighlightStyle]}>
         {renderWhiteKeyContent()}
       </Animated.View>
     </Animated.View>
@@ -324,23 +352,17 @@ const WhiteKey: React.FC<WhiteKeyProps> = memo(({
 
 // ========== 樣式定義 ==========
 
-const styles = StyleSheet.create({
-  whiteKeyContainer: {
-    borderRadius: WHITE_KEY_THEME.borderRadius,
-    borderWidth: WHITE_KEY_THEME.borderWidth,
-    overflow: 'hidden',
-  },
-  
+const styles = StyleSheet.create({  
   whiteKeyOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: WHITE_KEY_THEME.borderRadius,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    pointerEvents: 'none', // 不攔截觸控事件
+    pointerEvents: 'none',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   
   keyContent: {

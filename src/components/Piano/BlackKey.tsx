@@ -64,33 +64,55 @@ export interface BlackKeyProps {
  */
 const BLACK_KEY_THEME = {
   /** 圓角半徑 */
-  borderRadius: 0,
+  borderRadius: {
+    top: 2,
+    bottom: 6,
+  },
   
-  /** 邊框寬度 */
-  borderWidth: 1,
-  
-  /** 基礎顏色配置 */
+  /** 基礎顏色配置 - 烏木質感 */
   colors: {
-    normal: '#333333',
-    pressed: '#1A1A1A',
-    border: '#222222',
+    normal: {
+      start: '#1A1A1A',      // 深黑色頂部
+      middle: '#2A2A2A',     // 炭灰色中部
+      end: '#0F0F0F',        // 極深黑底部
+    },
+    pressed: {
+      start: '#0A0A0A',      // 按壓時更深
+      middle: '#1A1A1A',     
+      end: '#050505',        
+    },
+    highlight: 'rgba(255, 255, 255, 0.1)',  // 細微高光
     text: '#FFFFFF',
+    gloss: 'rgba(255, 255, 255, 0.05)',     // 光澤效果
   },
   
-  /** 陰影配置 - 簡化 */
+  /** 立體陰影配置 */
   shadow: {
-    elevation: 1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    // 主要陰影 - 強烈立體感
+    primary: {
+      elevation: 6,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      shadowColor: '#000000',
+    },
+    // 內部陰影效果
+    inner: {
+      elevation: 2,
+      shadowOffset: { width: 0, height: -1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+      shadowColor: '#000000',
+    },
   },
   
-  /** 按壓時的陰影配置 - 簡化 */
+  /** 按壓時的陰影配置 */
   pressedShadow: {
-    elevation: 0,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowColor: '#000000',
   },
 } as const;
 
@@ -123,13 +145,13 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
    * 計算黑鍵顏色方案
    */
   const blackKeyColors = useMemo(() => {
-    // 統一使用暗灰色主題
+    // 深黑烏木質感主題
     return {
-      normal: BLACK_KEY_THEME.colors.normal,
-      pressed: BLACK_KEY_THEME.colors.pressed,
-      border: BLACK_KEY_THEME.colors.border,
+      normal: BLACK_KEY_THEME.colors.normal.start,
+      pressed: BLACK_KEY_THEME.colors.pressed.start,
       text: BLACK_KEY_THEME.colors.text,
-      shadow: 'rgba(0, 0, 0, 0.3)',
+      shadow: 'rgba(0, 0, 0, 0.6)',
+      highlight: BLACK_KEY_THEME.colors.highlight,
     };
   }, []);
 
@@ -137,21 +159,29 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
   // ========== 動畫樣式 ==========
   
   /**
-   * 黑鍵容器動畫樣式
+   * 黑鍵容器動畫樣式 - 3D 立體效果
    */
   const animatedContainerStyle = useAnimatedStyle(() => {
-    const scale = withSpring(isPressed ? 0.98 : 1, {
-      damping: 15,
-      stiffness: 400,
+    const scale = withSpring(isPressed ? 0.96 : 1, {
+      damping: 18,
+      stiffness: 500,
     });
     
-    const elevation = isPressed 
-      ? BLACK_KEY_THEME.pressedShadow.elevation 
-      : BLACK_KEY_THEME.shadow.elevation;
+    const translateY = withSpring(isPressed ? 1 : 0, {
+      damping: 20,
+      stiffness: 600,
+    });
     
     return {
-      transform: [{ scale }],
-      elevation,
+      transform: [
+        { scale },
+        { translateY },
+      ],
+      elevation: isPressed ? BLACK_KEY_THEME.pressedShadow.elevation : BLACK_KEY_THEME.shadow.primary.elevation,
+      shadowOffset: isPressed ? BLACK_KEY_THEME.pressedShadow.shadowOffset : BLACK_KEY_THEME.shadow.primary.shadowOffset,
+      shadowOpacity: isPressed ? BLACK_KEY_THEME.pressedShadow.shadowOpacity : BLACK_KEY_THEME.shadow.primary.shadowOpacity,
+      shadowRadius: isPressed ? BLACK_KEY_THEME.pressedShadow.shadowRadius : BLACK_KEY_THEME.shadow.primary.shadowRadius,
+      shadowColor: BLACK_KEY_THEME.shadow.primary.shadowColor,
     };
   });
 
@@ -222,37 +252,35 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
   /**
    * 黑鍵專用樣式
    */
-  const blackKeyStyle = useMemo(() => [
-    styles.blackKeyContainer,
-    {
-      width,
-      height,
-      borderColor: blackKeyColors.border,
-      shadowColor: blackKeyColors.shadow,
-    },
-  ], [width, height, blackKeyColors]);
+  const blackKeyStyle = useMemo(() => ({
+    width,
+    height,
+    borderTopLeftRadius: BLACK_KEY_THEME.borderRadius.top,
+    borderTopRightRadius: BLACK_KEY_THEME.borderRadius.top,
+    borderBottomLeftRadius: BLACK_KEY_THEME.borderRadius.bottom,
+    borderBottomRightRadius: BLACK_KEY_THEME.borderRadius.bottom,
+    backgroundColor: blackKeyColors.normal,
+    overflow: 'hidden' as const,
+    zIndex: 10, // 確保黑鍵在白鍵上方
+  }), [width, height, blackKeyColors]);
 
   /**
    * 簡譜標記文字樣式（黑鍵專用）
    */
-  const solfegeTextStyle = useMemo(() => [
-    styles.solfegeText,
-    {
-      fontSize: Math.min(width * 0.25, 12), // 黑鍵字體稍小
-      color: '#FFFFFF',
-    }
-  ], [width]);
+  const solfegeTextStyle = useMemo(() => ({
+    ...styles.solfegeText,
+    fontSize: Math.min(width * 0.25, 12), // 黑鍵字體稍小
+    color: '#FFFFFF',
+  }), [width]);
 
   /**
    * 音符名稱文字樣式（黑鍵專用）
    */
-  const noteNameTextStyle = useMemo(() => [
-    styles.noteNameText,
-    {
-      fontSize: Math.min(width * 0.2, 10),
-      color: '#CCCCCC',
-    }
-  ], [width]);
+  const noteNameTextStyle = useMemo(() => ({
+    ...styles.noteNameText,
+    fontSize: Math.min(width * 0.2, 10),
+    color: '#CCCCCC',
+  }), [width]);
 
   // ========== 渲染內容 ==========
 
@@ -313,13 +341,6 @@ const BlackKey: React.FC<BlackKeyProps> = memo(({
 // ========== 樣式定義 ==========
 
 const styles = StyleSheet.create({
-  blackKeyContainer: {
-    borderRadius: BLACK_KEY_THEME.borderRadius,
-    borderWidth: BLACK_KEY_THEME.borderWidth,
-    overflow: 'hidden',
-    zIndex: 10, // 確保黑鍵在白鍵上方
-  },
-  
   blackKeyDepth: {
     flex: 1,
   },
@@ -330,10 +351,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: BLACK_KEY_THEME.borderRadius,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    pointerEvents: 'none', // 不攔截觸控事件
+    pointerEvents: 'none',
+    // 添加細微光澤效果
+    backgroundColor: BLACK_KEY_THEME.colors.gloss,
   },
   
   keyContent: {
